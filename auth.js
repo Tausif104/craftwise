@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
+  // On Vercel the app sits behind a proxy, so Auth.js cannot verify the host
+  // against a configured URL and rejects sign-in with UntrustedHost. Vercel
+  // provides the real host, so it is safe to trust it there.
+  trustHost: true,
   session: { strategy: "jwt" },
   providers: [
     Credentials({
