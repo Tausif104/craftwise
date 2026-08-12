@@ -1,0 +1,623 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/prisma"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  profileImage String?
+  password     String
+  role         Role     @default(AUTHOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  posts        Post[]
+  legalDocumentVersionsCreated  LegalDocumentVersion[] @relation("LegalDocumentCreatedBy")
+  legalDocumentVersionsApproved LegalDocumentVersion[] @relation("LegalDocumentApprovedBy")
+  contentVersions               ContentVersion[]       @relation("ContentVersionCreatedBy")
+  auditLogs                     AuditLog[]             @relation("AuditLogActor")
+  mediaAssets                   MediaAsset[]           @relation("MediaUploadedBy")
+  leadMessages                  LeadMessage[]          @relation("LeadMessageSender")
+}
+
+model Announcement {
+  id               String                @id @default(uuid())
+  name             String
+  isEnabled        Boolean               @default(true)
+  priority         Int                   @default(0)
+  targetMode       AnnouncementTargetMode @default(ALL_PAGES)
+  pageTargets      String[]
+  frequency        AnnouncementFrequency @default(ALWAYS)
+  messageDe        String                @db.VarChar(240)
+  messageEn        String                @db.VarChar(240)
+  linkDe           String?               @db.VarChar(500)
+  linkEn           String?               @db.VarChar(500)
+  openInNewTab     Boolean               @default(false)
+  startAt          DateTime?
+  endAt            DateTime?
+  impressionCount  Int                   @default(0)
+  clickCount       Int                   @default(0)
+  lastImpressionAt DateTime?
+  lastClickAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([isEnabled, startAt, endAt], map: "announcement_active_idx")
+  @@index([priority, createdAt], map: "announcement_priority_idx")
+}
+
+model Post {
+  id              String     @id @default(uuid())
+  title           String
+  postSlug        String     @unique
+  excerpt         String?
+  bannerImage     String
+  bannerAltText   String?
+  metaTitle       String?    @db.VarChar(160)
+  metaDescription String?    @db.VarChar(200)
+  canonicalUrl    String?
+  content         String
+  status          PostStatus @default(DRAFT)
+  /// Which locale this article is written in. Previously absent, so one row was
+  /// served under both /news and /en/news regardless of language (B4).
+  locale          String     @default("de")
+  /// Shared key pairing the DE and EN versions of the same article.
+  translationKey  String?
+  /// Optional future-dated publication (B4, A3).
+  scheduledFor    DateTime?
+  publishedAt     DateTime?
+  categoryKey     String?
+  tags            String[]
+  authorId        String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  author          User       @relation(fields: [authorId], references: [id])
+
+  @@index([authorId], map: "author_idx")
+  @@index([status, createdAt], map: "status_created_idx")
+  @@index([locale, status, createdAt], map: "post_locale_status_idx")
+  @@index([translationKey], map: "post_translation_idx")
+  @@index([scheduledFor], map: "post_scheduled_idx")
+}
+
+model LegalDocument {
+  id                        String                 @id @default(uuid())
+  documentKey               LegalDocumentKey
+  locale                    String
+  currentPublishedVersionId String?                @unique
+  currentPublishedVersion   LegalDocumentVersion?  @relation("CurrentPublishedVersion", fields: [currentPublishedVersionId], references: [id], onDelete: SetNull)
+  versions                  LegalDocumentVersion[] @relation("DocumentVersions")
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+
+  @@unique([documentKey, locale], map: "legal_document_key_locale_unique")
+  @@index([documentKey, locale], map: "legal_document_key_locale_idx")
+}
+
+model LegalDocumentVersion {
+  id             String              @id @default(uuid())
+  documentId     String
+  document       LegalDocument       @relation("DocumentVersions", fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber  Int
+  status         LegalDocumentStatus @default(DRAFT)
+  title          String
+  metaTitle      String?             @db.VarChar(160)
+  metaDescription String?            @db.VarChar(200)
+  heroTitle      String
+  heroSemiTitle  String?
+  heroDescription String?
+  heroImage      String?
+  bodyHtml       String
+  changeNote     String?
+  sourceVersionId String?
+  sourceVersion  LegalDocumentVersion? @relation("LegalDocumentSourceVersion", fields: [sourceVersionId], references: [id], onDelete: SetNull)
+  derivedVersions LegalDocumentVersion[] @relation("LegalDocumentSourceVersion")
+  createdById    String
+  createdBy      User                @relation("LegalDocumentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedById   String?
+  approvedBy     User?               @relation("LegalDocumentApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  publishedFor   LegalDocument?      @relation("CurrentPublishedVersion")
+  approvedAt     DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([documentId, versionNumber], map: "legal_document_version_unique")
+  @@index([documentId, status, createdAt], map: "legal_document_status_created_idx")
+}
+
+enum Role {
+  ADMIN
+  AUTHOR
+}
+
+enum PostStatus {
+  DRAFT
+  PENDING
+  APPROVED
+}
+
+enum LegalDocumentKey {
+  PRIVACY_POLICY
+  TERMS_CONDITIONS
+  LEGAL_NOTICE
+  DATA_PROCESSING
+}
+
+enum LegalDocumentStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  SUPERSEDED
+}
+
+enum AnnouncementTargetMode {
+  ALL_PAGES
+  SELECTED_PAGES
+}
+
+enum AnnouncementFrequency {
+  ALWAYS
+  ONCE
+  ONCE_PER_SESSION
+}
+
+model EarlyAccessSubscriber {
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  locale             String    @default("de")
+  consentTerms       Boolean   @default(false)
+  consentPrivacy     Boolean   @default(false)
+  consentMarketing   Boolean   @default(false)
+  confirmationToken  String?   @unique
+  confirmedAt        DateTime?
+  ipAddress          String?
+  userAgent          String?
+  source             String?
+  unsubscribedAt     DateTime?
+  utmSource          String?
+  utmMedium          String?
+  utmCampaign        String?
+  landingPage        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([confirmedAt], map: "early_access_confirmed_idx")
+  @@index([unsubscribedAt], map: "early_access_unsubscribed_idx")
+}
+
+// ---------------------------------------------------------------------------
+// CMS — shared publishing primitives
+//
+// Localization follows the Announcement precedent: sibling *De / *En columns
+// for short content, rather than one row per locale. Long-form documents keep
+// using the LegalDocument (row-per-locale + version table) pattern instead.
+// ---------------------------------------------------------------------------
+
+/// Generic draft/published state reused by every CMS content model (A2, A3).
+enum PublishState {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Immutable snapshot of a content record, so version history and restore (A3)
+/// work for every content type without a bespoke version table per model.
+model ContentVersion {
+  id            String   @id @default(uuid())
+  entityType    String
+  entityId      String
+  versionNumber Int
+  payload       Json
+  changeNote    String?
+  createdById   String?
+  createdBy     User?    @relation("ContentVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+
+  @@unique([entityType, entityId, versionNumber], map: "content_version_unique")
+  @@index([entityType, entityId, createdAt], map: "content_version_entity_idx")
+}
+
+/// Traceable record of every meaningful CMS action (E3).
+model AuditLog {
+  id          String      @id @default(uuid())
+  actorId     String?
+  actor       User?       @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorEmail  String?
+  action      AuditAction
+  entityType  String
+  entityId    String?
+  entityLabel String?
+  previouses  Json?
+  next        Json?
+  createdAt   DateTime    @default(now())
+
+  @@index([entityType, entityId, createdAt], map: "audit_entity_idx")
+  @@index([actorId, createdAt], map: "audit_actor_idx")
+  @@index([action, createdAt], map: "audit_action_idx")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  UNPUBLISH
+  RESTORE
+  LOGIN
+  EXPORT
+  SETTINGS_CHANGE
+}
+
+// ---------------------------------------------------------------------------
+// B1 — Pricing & Plans
+// ---------------------------------------------------------------------------
+
+model PricingPlan {
+  id             String        @id @default(uuid())
+  planKey        String        @unique
+  nameDe         String
+  nameEn         String
+  descriptionDe  String?
+  descriptionEn  String?
+  monthlyPrice   Decimal       @db.Decimal(10, 2)
+  annualPrice    Decimal       @db.Decimal(10, 2)
+  priceNoteDe    String?
+  priceNoteEn    String?
+  ctaLabelDe     String?
+  ctaLabelEn     String?
+  ctaHref        String?
+  isPopular      Boolean       @default(false)
+  sortOrder      Int           @default(0)
+  status         PublishState  @default(DRAFT)
+  publishedAt    DateTime?
+  features       PlanFeature[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([status, sortOrder], map: "pricing_plan_status_idx")
+}
+
+model PlanFeature {
+  id        String      @id @default(uuid())
+  planId    String
+  plan      PricingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  labelDe   String
+  labelEn   String
+  sortOrder Int         @default(0)
+
+  @@index([planId, sortOrder], map: "plan_feature_order_idx")
+}
+
+// ---------------------------------------------------------------------------
+// B2 — Testimonials
+// ---------------------------------------------------------------------------
+
+model Testimonial {
+  id           String                 @id @default(uuid())
+  authorName   String
+  roleDe       String?
+  roleEn       String?
+  quoteDe      String
+  quoteEn      String
+  rating       Int                    @default(5)
+  avatarUrl    String?
+  reviewedOn   DateTime?
+  status       PublishState           @default(DRAFT)
+  publishedAt  DateTime?
+  sortOrder    Int                    @default(0)
+  placements   TestimonialPlacement[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@index([status, sortOrder], map: "testimonial_status_idx")
+}
+
+/// Controls which pages a testimonial appears on — Felix asked for exactly this.
+model TestimonialPlacement {
+  id            String      @id @default(uuid())
+  testimonialId String
+  testimonial   Testimonial @relation(fields: [testimonialId], references: [id], onDelete: Cascade)
+  pageKey       String
+  sortOrder     Int         @default(0)
+
+  @@unique([testimonialId, pageKey], map: "testimonial_placement_unique")
+  @@index([pageKey, sortOrder], map: "testimonial_placement_page_idx")
+}
+
+// ---------------------------------------------------------------------------
+// B3 — FAQs
+// ---------------------------------------------------------------------------
+
+model FaqCategory {
+  id      String @id @default(uuid())
+  key     String @unique
+  nameDe  String
+  nameEn  String
+  sortOrder Int  @default(0)
+  items   FaqItem[]
+}
+
+model FaqItem {
+  id          String         @id @default(uuid())
+  categoryId  String?
+  category    FaqCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  questionDe  String
+  questionEn  String
+  answerDe    String
+  answerEn    String
+  status      PublishState   @default(DRAFT)
+  publishedAt DateTime?
+  sortOrder   Int            @default(0)
+  placements  FaqPlacement[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([status, sortOrder], map: "faq_item_status_idx")
+}
+
+model FaqPlacement {
+  id        String  @id @default(uuid())
+  faqItemId String
+  faqItem   FaqItem @relation(fields: [faqItemId], references: [id], onDelete: Cascade)
+  pageKey   String
+  sortOrder Int     @default(0)
+
+  @@unique([faqItemId, pageKey], map: "faq_placement_unique")
+  @@index([pageKey, sortOrder], map: "faq_placement_page_idx")
+}
+
+// ---------------------------------------------------------------------------
+// B5 — Media Library
+// ---------------------------------------------------------------------------
+
+model MediaAsset {
+  id           String       @id @default(uuid())
+  url          String       @unique
+  publicId     String?      @unique
+  fileName     String
+  mimeType     String?
+  bytes        Int?
+  width        Int?
+  height       Int?
+  altTextDe    String?
+  altTextEn    String?
+  folder       String?
+  uploadedById String?
+  uploadedBy   User?        @relation("MediaUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  usages       MediaUsage[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([folder, createdAt], map: "media_folder_idx")
+}
+
+/// Lets the CMS warn before deleting an asset that is still referenced (B5).
+model MediaUsage {
+  id         String     @id @default(uuid())
+  assetId    String
+  asset      MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String
+  field      String?
+
+  @@unique([assetId, entityType, entityId, field], map: "media_usage_unique")
+  @@index([entityType, entityId], map: "media_usage_entity_idx")
+}
+
+// ---------------------------------------------------------------------------
+// C1 / C2 — Leads, form intake and delivery retry
+// ---------------------------------------------------------------------------
+
+enum LeadType {
+  CONTACT
+  CONSULTING
+  DEMO
+  WAITLIST
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+  CLOSED
+}
+
+model Lead {
+  id            String        @id @default(uuid())
+  type          LeadType      @default(OTHER)
+  status        LeadStatus    @default(NEW)
+  name          String?
+  email         String
+  phone         String?
+  company       String?
+  message       String?
+  locale        String        @default("de")
+  consentGiven  Boolean       @default(false)
+  consentAt     DateTime?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  utmTerm       String?
+  utmContent    String?
+  landingPage   String?
+  referrer      String?
+  ipAddress     String?
+  userAgent     String?
+  internalNotes String?
+  tags          String[]
+  lastActivityAt DateTime?
+  payload       Json?
+  messages      LeadMessage[]
+  tasks         IntegrationDelivery[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status, createdAt], map: "lead_status_idx")
+  @@index([type, createdAt], map: "lead_type_idx")
+  @@index([email], map: "lead_email_idx")
+}
+
+enum MessageDirection {
+  OUTBOUND
+  INBOUND
+  NOTE
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+/// C3 — email sent to a lead from the admin panel, stored in the lead history.
+model LeadMessage {
+  id          String           @id @default(uuid())
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  direction   MessageDirection @default(OUTBOUND)
+  status      MessageStatus    @default(QUEUED)
+  subject     String?
+  bodyHtml    String?
+  bodyText    String?
+  locale      String           @default("de")
+  fromAddress String?
+  toAddress   String?
+  templateId  String?
+  template    EmailTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  errorText   String?
+  sentAt      DateTime?
+  senderId    String?
+  sender      User?            @relation("LeadMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+
+  @@index([leadId, createdAt], map: "lead_message_thread_idx")
+  @@index([status, createdAt], map: "lead_message_status_idx")
+}
+
+// ---------------------------------------------------------------------------
+// C4 — Email templates
+// ---------------------------------------------------------------------------
+
+enum EmailTemplateKey {
+  FIRST_REPLY
+  FOLLOW_UP
+  DEMO_LINK
+  CONSULTING_REPLY
+  CUSTOM
+}
+
+model EmailTemplate {
+  id           String           @id @default(uuid())
+  templateKey  EmailTemplateKey @default(CUSTOM)
+  name         String
+  subjectDe    String
+  subjectEn    String
+  bodyDe       String
+  bodyEn       String
+  status       PublishState     @default(DRAFT)
+  sortOrder    Int              @default(0)
+  messages     LeadMessage[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([status, sortOrder], map: "email_template_status_idx")
+}
+
+// ---------------------------------------------------------------------------
+// C2 / E1 — integration delivery with retry, so a failure never loses a lead
+// ---------------------------------------------------------------------------
+
+enum DeliveryStatus {
+  PENDING
+  RETRYING
+  DELIVERED
+  FAILED
+}
+
+model IntegrationDelivery {
+  id           String         @id @default(uuid())
+  leadId       String?
+  lead         Lead?          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  target       String
+  status       DeliveryStatus @default(PENDING)
+  attempts     Int            @default(0)
+  maxAttempts  Int            @default(5)
+  nextAttemptAt DateTime?
+  lastError    String?
+  payload      Json?
+  deliveredAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([status, nextAttemptAt], map: "delivery_queue_idx")
+}
+
+// ---------------------------------------------------------------------------
+// D3 — SEO & tracking settings
+// ---------------------------------------------------------------------------
+
+/// One row per page (pathKey); null pathKey holds the site-wide defaults.
+model SeoSetting {
+  id               String   @id @default(uuid())
+  pathKey          String   @unique
+  isSiteDefault    Boolean  @default(false)
+  metaTitleDe      String?  @db.VarChar(160)
+  metaTitleEn      String?  @db.VarChar(160)
+  metaDescriptionDe String? @db.VarChar(320)
+  metaDescriptionEn String? @db.VarChar(320)
+  ogTitleDe        String?
+  ogTitleEn        String?
+  ogDescriptionDe  String?
+  ogDescriptionEn  String?
+  ogImageUrl       String?
+  canonicalUrl     String?
+  noIndex          Boolean  @default(false)
+  noFollow         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+/// Site-wide tracking config, kept out of code so editors can change it (D3, E4).
+model TrackingSetting {
+  id                String   @id @default(uuid())
+  environment       String   @unique @default("production")
+  ga4MeasurementId  String?
+  ga4PropertyId     String?
+  gtmContainerId    String?
+  consentRequired   Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// E1 — Integrations status board (never stores secrets in plain text)
+// ---------------------------------------------------------------------------
+
+enum IntegrationStatus {
+  CONNECTED
+  ERROR
+  NOT_CONFIGURED
+}
+
+model Integration {
+  id             String            @id @default(uuid())
+  key            String            @unique
+  name           String
+  status         IntegrationStatus @default(NOT_CONFIGURED)
+  lastSyncAt     DateTime?
+  lastCheckedAt  DateTime?
+  lastError      String?
+  /// Only a masked hint such as "sk_live_…4f2a" — never the credential itself.
+  credentialHint String?
+  configUrl      String?
+  updatedAt      DateTime          @updatedAt
+}

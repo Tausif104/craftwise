@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Check icon">
+<rect width="20" height="20" rx="10" fill="var(--fill-0, #009F6B)" fill-opacity="0.1"/>
+<path id="Icon" fill-rule="evenodd" clip-rule="evenodd" d="M14.2522 6.15851L8.28555 11.9168L6.70221 10.2252C6.41055 9.95017 5.95221 9.93351 5.61888 10.1668C5.29388 10.4085 5.20221 10.8335 5.40221 11.1752L7.27721 14.2252C7.46055 14.5085 7.77721 14.6835 8.13555 14.6835C8.47721 14.6835 8.80221 14.5085 8.98555 14.2252C9.28555 13.8335 15.0105 7.00851 15.0105 7.00851C15.7605 6.24184 14.8522 5.56684 14.2522 6.15017V6.15851Z" fill="var(--fill-0, #009F6B)"/>
+</g>
+</svg>

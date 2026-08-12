@@ -1,0 +1,413 @@
+/* ==========================================================================
+   CraftWise Admin — design system
+   --------------------------------------------------------------------------
+   Scoped to .adm so nothing here can leak into the marketing site, and so the
+   global h2/h3/p sizing in globals.css (tuned for landing pages) stops bleeding
+   into dense admin screens.
+
+   Palette is the existing brand: deep teal #012E33 → #304C61, amber #CC8640,
+   ink #0A1B28 on a #F8FBFF canvas. Nothing new is invented; it is tightened.
+   ========================================================================== */
+
+.adm {
+  /* surfaces */
+  --adm-canvas: #f7fafd;
+  --adm-surface: #ffffff;
+  --adm-surface-sunken: #f8fbff;
+  --adm-surface-raised: #ffffff;
+
+  /* lines — two weights only, hairline and structural */
+  --adm-line: #e6eef7;
+  --adm-line-strong: #d7e2ee;
+
+  /* ink */
+  --adm-ink: #0a1b28;
+  --adm-ink-muted: #5c6b78;
+  --adm-ink-faint: #8a99a6;
+
+  /* brand */
+  --adm-accent: #cc8640;
+  --adm-accent-ink: #8f5a22;
+  --adm-accent-wash: #fdf4ea;
+  --adm-deep: #012e33;
+  --adm-teal: #304c61;
+
+  /* semantic */
+  --adm-ok: #217a39;
+  --adm-ok-wash: #e9f9ef;
+  --adm-warn: #b06823;
+  --adm-warn-wash: #fff1e2;
+  --adm-bad: #b42318;
+  --adm-bad-wash: #fdecec;
+
+  /* geometry — tighter than the marketing site, admin reads denser */
+  --adm-r-sm: 10px;
+  --adm-r-md: 14px;
+  --adm-r-lg: 18px;
+  --adm-r-xl: 22px;
+
+  /* elevation — crisp and shallow, not soft blobs */
+  --adm-e1: 0 1px 2px rgba(10, 27, 40, 0.04), 0 0 0 1px rgba(10, 27, 40, 0.04);
+  --adm-e2: 0 2px 4px rgba(10, 27, 40, 0.04), 0 8px 24px -12px rgba(10, 27, 40, 0.18);
+  --adm-e3: 0 12px 40px -16px rgba(10, 27, 40, 0.28);
+
+}
+
+/* Painting is separate from the token holder on purpose. `.adm` is unlayered,
+   so declaring background/color there would beat any Tailwind utility (bg-white
+   on the sheet, for one) regardless of specificity. */
+.adm-root {
+  color: var(--adm-ink);
+  background: var(--adm-canvas);
+}
+
+/* --------------------------------------------------------------------------
+   Reset the marketing type scale inside admin. globals.css sets h2 to 48px and
+   p to a fixed grey — unusable in a data-dense panel.
+
+   Wrapped in :where() so the whole selector carries ZERO specificity. A plain
+   `.adm p` rule (0,1,1) would outrank component classes like `.adm-eyebrow`
+   (0,1,0) and silently force their font-size back to inherit.
+   -------------------------------------------------------------------------- */
+/* These sit in @layer base on purpose. Unlayered CSS beats layered CSS in the
+   cascade regardless of specificity, and Tailwind v4 emits utilities into
+   @layer utilities — so an unlayered `margin: 0` here silently overrode every
+   margin utility (mt-*, mx-auto, …) on every <p> and heading in the admin. */
+@layer base {
+  :where(.adm) :where(h1, h2, h3, h4) {
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    letter-spacing: normal;
+    margin: 0;
+    color: inherit;
+  }
+
+  :where(.adm) :where(p) {
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+    margin: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Numerals. The signature move: every figure in the panel uses tabular,
+   slashed-zero digits so columns align like a measuring scale. Trades software
+   should feel measured, not marketing-y.
+   -------------------------------------------------------------------------- */
+.adm-num {
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.02em;
+}
+
+.adm-metric {
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-size: clamp(1.9rem, 1.4rem + 1.4vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--adm-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Eyebrow — small caps label. Kept from the existing dashboard language, but
+   paired with a short amber rule so sections read as measured segments.
+   -------------------------------------------------------------------------- */
+/* Eyebrow. The leading rule is dropped — at this density it read as clutter
+   repeated a dozen times per screen. Letter-spacing carries the label role. */
+.adm-eyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--adm-ink-faint);
+}
+
+/* --------------------------------------------------------------------------
+   Surfaces
+   -------------------------------------------------------------------------- */
+/* Flat by default. A hairline defines the edge; no shadow, no lift. Depth is
+   reserved for things that genuinely float (dialogs, the save bar). */
+.adm-surface {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-lg);
+  transition: border-color 160ms ease;
+}
+
+.adm-surface-interactive:hover {
+  border-color: var(--adm-line-strong);
+}
+
+/* Metric row — figures divided by hairlines rather than boxed individually.
+   Four bordered cards in a row is four times the chrome for the same reading. */
+.adm-metrics {
+  display: grid;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-lg);
+  background: var(--adm-surface);
+  overflow: hidden;
+}
+
+.adm-metrics > * + * {
+  border-top: 1px solid var(--adm-line);
+}
+
+@media (min-width: 640px) {
+  .adm-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adm-metrics > * + * {
+    border-top: 0;
+  }
+
+  .adm-metrics > *:nth-child(n + 3) {
+    border-top: 1px solid var(--adm-line);
+  }
+
+  .adm-metrics > *:nth-child(even) {
+    border-left: 1px solid var(--adm-line);
+  }
+}
+
+@media (min-width: 1280px) {
+  .adm-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .adm-metrics > *:nth-child(n + 3) {
+    border-top: 0;
+  }
+
+  .adm-metrics > * + * {
+    border-left: 1px solid var(--adm-line);
+  }
+}
+
+/* Blueprint wash — a faint measured grid, the one decorative flourish.
+   Reads as drafting paper, which is the subject's own vernacular. */
+.adm-blueprint {
+  background-image:
+    linear-gradient(to right, rgba(48, 76, 97, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(48, 76, 97, 0.045) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar
+   -------------------------------------------------------------------------- */
+.adm-sidebar {
+  background:
+    radial-gradient(140% 55% at 0% 0%, rgba(204, 134, 64, 0.13) 0%, transparent 62%),
+    linear-gradient(180deg, var(--adm-deep) 0%, #063a41 42%, var(--adm-teal) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Slim, unobtrusive scrollbar — a full-width native bar reads as unfinished. */
+.adm-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.adm-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.adm-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+
+.adm-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* --------------------------------------------------------------------------
+   Navigation — the measuring rail
+   --------------------------------------------------------------------------
+   One continuous hairline runs the full height of the nav. Items hang off it;
+   the active item turns its own segment of the rail amber. No plates, no
+   boxes, no fills — position is communicated by the rail alone, which keeps
+   the panel quiet and matches the measuring language used elsewhere.
+
+   Each row draws its own 1px of rail via border-left, so the line stays
+   unbroken through group labels and gaps without a separate element.
+   -------------------------------------------------------------------------- */
+.adm-rail {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.adm-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-left: -1px;
+  padding: 0.42rem 0.5rem 0.42rem 0.95rem;
+  border-left: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.4;
+  letter-spacing: -0.006em;
+  color: rgba(255, 255, 255, 0.6);
+  transition:
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.adm-nav-link svg {
+  opacity: 0.5;
+  transition:
+    opacity 140ms ease,
+    color 140ms ease;
+}
+
+/* Hover changes ink only — nothing gains a background. */
+.adm-nav-link:hover {
+  color: #fff;
+  border-left-color: rgba(255, 255, 255, 0.28);
+}
+
+.adm-nav-link:hover svg {
+  opacity: 0.9;
+}
+
+.adm-nav-link[data-active="true"] {
+  color: #fff;
+  font-weight: 600;
+  border-left-color: var(--adm-accent);
+}
+
+.adm-nav-link[data-active="true"] svg {
+  opacity: 1;
+  color: var(--adm-accent);
+}
+
+/* Group label sits on the rail like a gradation mark. */
+.adm-nav-group {
+  margin-left: -1px;
+  padding-left: 0.95rem;
+  border-left: 2px solid transparent;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Table — hairline rows, sticky head, no zebra striping
+   -------------------------------------------------------------------------- */
+.adm-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.adm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--adm-surface);
+  color: var(--adm-ink-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  padding: 0.7rem 1.15rem;
+  text-align: left;
+  border-bottom: 1px solid var(--adm-line);
+  white-space: nowrap;
+}
+
+.adm-table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.adm-table tbody tr:hover {
+  background: #fbfdff;
+}
+
+.adm-table tbody td {
+  padding: 0.85rem 1.15rem;
+  border-top: 1px solid var(--adm-line);
+  font-size: 13.5px;
+  vertical-align: middle;
+}
+
+/* --------------------------------------------------------------------------
+   Chart furniture — tick marks and a measured baseline
+   -------------------------------------------------------------------------- */
+.adm-chart-grid {
+  background-image: linear-gradient(to bottom, #eef3f8 1px, transparent 1px);
+  background-size: 100% 25%;
+}
+
+.adm-bar {
+  background: linear-gradient(180deg, var(--adm-accent) 0%, #b8752f 100%);
+  border-radius: 3px 3px 1px 1px;
+  transition:
+    filter 140ms ease,
+    transform 140ms ease;
+}
+
+.adm-bar:hover {
+  filter: brightness(1.08);
+}
+
+/* --------------------------------------------------------------------------
+   Focus — one visible ring everywhere, never removed
+   -------------------------------------------------------------------------- */
+.adm :focus-visible {
+  outline: 2px solid var(--adm-accent);
+  outline-offset: 2px;
+  border-radius: var(--adm-r-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Entrance. Deliberately one short, staggered reveal on load rather than
+   animation scattered through the UI.
+   -------------------------------------------------------------------------- */
+@keyframes adm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.adm-rise {
+  animation: adm-rise 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.adm-stagger > * {
+  animation: adm-rise 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.adm-stagger > *:nth-child(1) { animation-delay: 20ms; }
+.adm-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.adm-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.adm-stagger > *:nth-child(4) { animation-delay: 140ms; }
+.adm-stagger > *:nth-child(5) { animation-delay: 180ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-rise,
+  .adm-stagger > * {
+    animation: none;
+  }
+
+  .adm *,
+  .adm *::before,
+  .adm *::after {
+    transition-duration: 1ms !important;
+  }
+}

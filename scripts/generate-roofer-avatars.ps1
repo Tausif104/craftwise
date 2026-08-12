@@ -1,0 +1,110 @@
+param(
+    [string]$TestimonialsPath = "data/testimonials.js",
+    [string]$OutputDir = "public/images/testimonials/roofers"
+)
+
+Add-Type -AssemblyName System.Drawing
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+function Convert-To-Slug {
+    param([string]$Value)
+
+    $normalized = $Value.ToLowerInvariant().Normalize([Text.NormalizationForm]::FormD)
+    $builder = New-Object System.Text.StringBuilder
+
+    foreach ($char in $normalized.ToCharArray()) {
+        $category = [Globalization.CharUnicodeInfo]::GetUnicodeCategory($char)
+        if ($category -ne [Globalization.UnicodeCategory]::NonSpacingMark) {
+            [void]$builder.Append($char)
+        }
+    }
+
+    return ($builder.ToString().Normalize([Text.NormalizationForm]::FormC) -replace '[^a-z0-9]+', '-' -replace '(^-|-$)', '')
+}
+
+function Get-RooferNames {
+    param([string]$Path)
+
+    $content = Get-Content -LiteralPath $Path -Raw
+    $match = [regex]::Match($content, 'export const rooferstestimonials\s*=\s*\{[\s\S]*?items:\s*\[(?<items>[\s\S]*?)\]\s*,\s*\};')
+    if (-not $match.Success) {
+        throw "Could not find rooferstestimonials.items in $Path"
+    }
+
+    return [regex]::Matches($match.Groups['items'].Value, 'name:\s*"(?<name>[^"]+)"') | ForEach-Object {
+        $_.Groups['name'].Value
+    }
+}
+
+function Save-SquarePhoto {
+    param(
+        [string]$SourcePath,
+        [string]$OutputPath,
+        [double]$CropYRatio = 0.28
+    )
+
+    $src = [System.Drawing.Image]::FromFile($SourcePath)
+    $side = [Math]::Min($src.Width, $src.Height)
+    $x = [Math]::Floor(($src.Width - $side) / 2)
+    $y = [Math]::Floor(($src.Height - $side) * $CropYRatio)
+
+    if ($y -lt 0) { $y = 0 }
+    if (($y + $side) -gt $src.Height) { $y = $src.Height - $side }
+
+    $dest = New-Object System.Drawing.Bitmap 512, 512
+    $graphics = [System.Drawing.Graphics]::FromImage($dest)
+    $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+    $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+
+    $graphics.DrawImage(
+        $src,
+        (New-Object System.Drawing.Rectangle 0, 0, 512, 512),
+        (New-Object System.Drawing.Rectangle $x, $y, $side, $side),
+        [System.Drawing.GraphicsUnit]::Pixel
+    )
+
+    $dest.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
+
+    $graphics.Dispose()
+    $dest.Dispose()
+    $src.Dispose()
+}
+
+# Curated realistic free-photo sources from Pexels. The output remains client-name based:
+# each roofer testimonial name is slugified and saved as <client-name>.png.
+$photoSourcesBySlug = @{
+    "gerrit-s"  = @{ Url = "https://images.pexels.com/photos/15200454/pexels-photo-15200454.jpeg?auto=compress&cs=tinysrgb&w=1000"; CropYRatio = 0.18 }
+    "nadine-f"  = @{ Url = "https://images.pexels.com/photos/7937681/pexels-photo-7937681.jpeg?auto=compress&cs=tinysrgb&w=1000"; CropYRatio = 0.10 }
+    "volker-m"  = @{ Url = "https://images.pexels.com/photos/7788227/pexels-photo-7788227.jpeg?auto=compress&cs=tinysrgb&w=1000"; CropYRatio = 0.18 }
+    "yasmin-k"  = @{ Url = "https://images.pexels.com/photos/8487362/pexels-photo-8487362.jpeg?auto=compress&cs=tinysrgb&w=1000"; CropYRatio = 0.16 }
+    "dennis-r"  = @{ Url = "https://images.pexels.com/photos/15200451/pexels-photo-15200451.jpeg?auto=compress&cs=tinysrgb&w=1000"; CropYRatio = 0.18 }
+    "kerstin-a" = @{ Url = "https://images.pexels.com/photos/8488005/pexels-photo-8488005.jpeg?auto=compress&cs=tinysrgb&w=1000"; CropYRatio = 0.14 }
+}
+
+$resolvedOutputDir = Join-Path (Get-Location) $OutputDir
+$tempDir = Join-Path $env:TEMP "craftwise-roofer-realistic-avatars"
+New-Item -ItemType Directory -Force -Path $resolvedOutputDir | Out-Null
+New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+
+$client = New-Object System.Net.WebClient
+$client.Headers.Add("User-Agent", "Mozilla/5.0")
+
+$names = Get-RooferNames $TestimonialsPath
+foreach ($name in $names) {
+    $slug = Convert-To-Slug $name
+    if (-not $photoSourcesBySlug.ContainsKey($slug)) {
+        throw "No realistic photo source configured for '$name' ($slug). Add a source URL to `$photoSourcesBySlug."
+    }
+
+    $source = $photoSourcesBySlug[$slug]
+    $tempFile = Join-Path $tempDir "$slug.jpg"
+    $outputPath = Join-Path $resolvedOutputDir "$slug.png"
+
+    $client.DownloadFile($source.Url, $tempFile)
+    Save-SquarePhoto -SourcePath $tempFile -OutputPath $outputPath -CropYRatio $source.CropYRatio
+}
+
+$client.Dispose()
+
+Get-ChildItem -LiteralPath $resolvedOutputDir -Filter "*.png" | Select-Object Name, Length
