@@ -6,6 +6,31 @@ import { routing } from "./i18n/routing";
 const intlMiddleware = createMiddleware(routing);
 
 const ADMIN_PATH_PREFIXES = ["/dashboard/blog/edit-blog"];
+
+/**
+ * Reads the session token from the request.
+ *
+ * `secureCookie` has to be passed explicitly. Auth.js writes the session to
+ * `__Secure-authjs.session-token` over HTTPS and `authjs.session-token` over
+ * HTTP, and getToken() looks for the non-prefixed name unless told otherwise.
+ * Without this the middleware finds no token in production, redirects to
+ * /login, and the login page — which reads the cookie correctly via auth() —
+ * redirects straight back: ERR_TOO_MANY_REDIRECTS.
+ */
+function usesSecureCookies(req) {
+  return (
+    req.nextUrl.protocol === "https:" ||
+    req.headers.get("x-forwarded-proto") === "https"
+  );
+}
+
+function readToken(req) {
+  return getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+    secureCookie: usesSecureCookies(req),
+  });
+}
 const AUTH_COOKIE_NAMES = [
   "authjs.session-token",
   "__Secure-authjs.session-token",
@@ -49,10 +74,7 @@ export default async function proxy(req) {
       pathname.startsWith("/register/");
 
     if (pathname.startsWith("/login") || pathname.startsWith("/register")) {
-      const token = await getToken({
-        req,
-        secret: process.env.AUTH_SECRET,
-      });
+      const token = await readToken(req);
 
       const hasAuthCookies = AUTH_COOKIE_NAMES.some((name) =>
         req.cookies.has(name)
@@ -65,6 +87,9 @@ export default async function proxy(req) {
           response.cookies.set(cookieName, "", {
             path: "/",
             expires: new Date(0),
+            // A __Secure-/__Host- prefixed cookie is only removable when the
+            // secure attribute matches how it was set.
+            secure: usesSecureCookies(req),
           });
         }
 
@@ -82,10 +107,7 @@ export default async function proxy(req) {
       return NextResponse.next();
     }
 
-    const token = await getToken({
-      req,
-      secret: process.env.AUTH_SECRET,
-    });
+    const token = await readToken(req);
 
     if (!token) {
       return NextResponse.redirect(new URL("/login", req.url));
