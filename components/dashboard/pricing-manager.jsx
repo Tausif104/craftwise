@@ -99,6 +99,10 @@ export default function PricingManager({ plans }) {
     setDirty(true);
   };
 
+  // Editing something that is already live: Save must keep it live (KEEP), and
+  // taking it off the website has to be a deliberate, separate action.
+  const editingPublished = editing && editing !== "new" && form.status === "PUBLISHED";
+
   const submit = (status) => {
     const formData = new FormData();
 
@@ -149,6 +153,14 @@ export default function PricingManager({ plans }) {
         actions={<AdminButton onClick={() => open(null)}>New plan</AdminButton>}
       />
 
+      {plans.length && !plans.some((plan) => plan.status === "PUBLISHED") ? (
+        <div className='adm-rise mb-5 rounded-[var(--adm-r-lg)] border border-[#F3C4C0] bg-[var(--adm-bad-wash)] px-4 py-3 text-[13px] leading-relaxed text-[var(--adm-bad)]'>
+          No plan is published, so the pricing page is showing the built-in
+          fallback prices instead of the ones below. Publish at least one plan to
+          take control of the page.
+        </div>
+      ) : null}
+
       <EditorSheet
         open={Boolean(editing)}
         onOpenChange={(next) => {
@@ -161,8 +173,26 @@ export default function PricingManager({ plans }) {
         description='Changes apply everywhere this plan appears on the website.'
         dirty={dirty}
         pending={pending}
-        onSaveDraft={() => submit("DRAFT")}
+        saveLabel={editingPublished ? "Save changes" : "Save draft"}
+        publishLabel={editingPublished ? "Save & publish" : "Publish"}
+        footerNote={
+          editingPublished && !dirty ? "Live on the website" : undefined
+        }
+        onSaveDraft={() => submit(editingPublished ? "KEEP" : "DRAFT")}
         onPublish={() => submit("PUBLISHED")}
+        onUnpublish={
+          editingPublished
+            ? () => {
+                if (
+                  !window.confirm(
+                    "Take this plan off the website? Visitors will stop seeing it until you publish it again.",
+                  )
+                )
+                  return;
+                submit("DRAFT");
+              }
+            : undefined
+        }
       >
         <div className='flex justify-end pb-4'>
           <LocaleTabs locale={locale} onChange={setLocale} />

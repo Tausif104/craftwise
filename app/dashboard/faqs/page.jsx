@@ -6,8 +6,14 @@ export const dynamic = "force-dynamic";
 export default async function FaqAdminPage({ searchParams }) {
   const params = await searchParams;
   const pageKey = params?.page ?? "";
+  const categoryId = params?.category ?? "";
 
-  const where = pageKey ? { placements: { some: { pageKey } } } : {};
+  const where = {
+    ...(pageKey ? { placements: { some: { pageKey } } } : {}),
+    // "none" lists the questions that belong to no section yet — otherwise they
+    // are invisible among 50+ rows.
+    ...(categoryId ? { categoryId: categoryId === "none" ? null : categoryId } : {}),
+  };
 
   const [items, categories] = await Promise.all([
     prisma.faqItem.findMany({
@@ -23,6 +29,7 @@ export default async function FaqAdminPage({ searchParams }) {
       items={JSON.parse(JSON.stringify(items))}
       categories={JSON.parse(JSON.stringify(categories))}
       pageFilter={pageKey}
+      categoryFilter={categoryId}
     />
   );
 }

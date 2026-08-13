@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@/auth";
 import { listDashboardPosts } from "@/app/actions/blog.actions";
 import BlogTable from "@/components/dashboard/blog-table";
@@ -19,6 +20,12 @@ export default async function DashboardBlogPage() {
             Review current posts, update publishing status, and edit existing content.
           </p>
         </div>
+        <Link
+          href='/dashboard/blog/add-blog'
+          className='inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#CC8640] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b8752f]'
+        >
+          New article
+        </Link>
       </div>
       <BlogTable posts={posts} isAdmin={session?.user?.role === "ADMIN"} />
     </div>
