@@ -249,6 +249,58 @@ export async function saveLegalDocumentDraft(_prevState, formData) {
   }
 }
 
+/**
+ * Discards an unpublished draft.
+ *
+ * Only DRAFT and PENDING versions can go: published and superseded versions are
+ * the legal audit trail and stay put. Drafts cloned from this one keep working
+ * because `sourceVersionId` is SetNull.
+ */
+export async function deleteLegalDocumentDraft(versionId) {
+  const result = await requireSession();
+  if (result.error) return result.error;
+
+  try {
+    const version = await prisma.legalDocumentVersion.findUnique({
+      where: { id: versionId },
+      include: {
+        document: {
+          select: {
+            documentKey: true,
+            locale: true,
+            currentPublishedVersionId: true,
+          },
+        },
+      },
+    });
+
+    if (!version) {
+      return { success: false, msg: "Draft not found." };
+    }
+
+    const isAdmin = result.session.user.role === "ADMIN";
+    if (!isAdmin && version.createdById !== result.session.user.id) {
+      return { success: false, msg: "Forbidden" };
+    }
+
+    if (!["DRAFT", "PENDING"].includes(version.status)) {
+      return { success: false, msg: "Only drafts can be deleted." };
+    }
+
+    if (version.document.currentPublishedVersionId === version.id) {
+      return { success: false, msg: "This version is live and cannot be deleted." };
+    }
+
+    await prisma.legalDocumentVersion.delete({ where: { id: versionId } });
+
+    revalidateLegalDocumentPaths(version.document.documentKey, version.document.locale);
+    return { success: true, msg: `Deleted draft v${version.versionNumber}.` };
+  } catch (error) {
+    console.error("deleteLegalDocumentDraft error:", error);
+    return { success: false, msg: "Failed to delete draft." };
+  }
+}
+
 export async function submitLegalDocumentDraft(versionId) {
   const result = await requireSession();
   if (result.error) return result.error;

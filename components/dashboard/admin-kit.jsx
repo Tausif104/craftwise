@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -289,6 +292,71 @@ export function Cell({ className, children, ...props }) {
     <td className={cn("text-[var(--adm-ink)]", className)} {...props}>
       {children}
     </td>
+  );
+}
+
+/**
+ * List ordering for content that renders in a fixed sequence on the website
+ * (B2, B3). Moving a row applies immediately and persists the whole list, so
+ * what the admin shows top-to-bottom is the order visitors get.
+ *
+ * `saveAction` receives the ordered ids and returns the standard action shape.
+ */
+export function useReorderable(items, saveAction) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [order, setOrder] = useState(items);
+
+  useEffect(() => setOrder(items), [items]);
+
+  const move = (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= order.length) return;
+
+    const next = [...order];
+    [next[index], next[target]] = [next[target], next[index]];
+    setOrder(next);
+
+    startTransition(async () => {
+      const result = await saveAction(next.map((item) => item.id));
+
+      if (result?.success) {
+        router.refresh();
+      } else {
+        setOrder(items);
+        toast.error(result?.msg || "Could not save the new order.");
+      }
+    });
+  };
+
+  return { order, move, reordering: pending };
+}
+
+export function ReorderCell({ index, total, onMove, disabled }) {
+  const button =
+    "rounded-[10px] border border-[var(--adm-line)] p-1 text-[var(--adm-ink-muted)] transition hover:border-[var(--adm-accent)] hover:text-[var(--adm-accent-ink)] disabled:cursor-not-allowed disabled:opacity-40";
+
+  return (
+    <div className='flex items-center gap-1'>
+      <button
+        type='button'
+        className={button}
+        onClick={() => onMove(index, -1)}
+        disabled={disabled || index === 0}
+        aria-label='Move up'
+      >
+        <ChevronUp className='h-3.5 w-3.5' />
+      </button>
+      <button
+        type='button'
+        className={button}
+        onClick={() => onMove(index, 1)}
+        disabled={disabled || index === total - 1}
+        aria-label='Move down'
+      >
+        <ChevronDown className='h-3.5 w-3.5' />
+      </button>
+    </div>
   );
 }
 

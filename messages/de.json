@@ -980,7 +980,8 @@
     "supportBookDemo": "Demo buchen",
     "supportDataProcessing": "Auftragsverarbeitung (AVV)",
     "supportFaq": "FAQs",
-    "copyright": "© 2025, Alle Rechte vorbehalten"
+    "copyright": "© 2025, Alle Rechte vorbehalten",
+    "supportCookieSettings": "Cookie-Einstellungen"
   },
   "HomeCTA": {
     "titlePart1": "Starte heute Deine ",
@@ -2491,6 +2492,38 @@
     "error": {
       "title": "Etwas ist schiefgelaufen",
       "body": "Wir konnten Ihre E-Mail-Adresse gerade nicht bestätigen. Bitte versuchen Sie den Link gleich erneut."
+    }
+  },
+  "CookieConsent": {
+    "title": "Wir respektieren deine Privatsphäre",
+    "body": "Wir verwenden notwendige Cookies, damit die Website funktioniert. Für Übersetzung und Statistik setzen wir zusätzliche Dienste ein – aber nur, wenn du zustimmst. Deine Entscheidung kannst du jederzeit im Footer unter „Cookie-Einstellungen“ ändern.",
+    "bannerAriaLabel": "Cookie-Hinweis",
+    "acceptAll": "Alle akzeptieren",
+    "rejectAll": "Alle ablehnen",
+    "settings": "Einstellungen",
+    "saveSelection": "Auswahl speichern",
+    "alwaysOn": "Immer aktiv",
+    "settingsTitle": "Cookie-Einstellungen",
+    "settingsBody": "Entscheide selbst, welche Kategorien du erlaubst. Notwendige Cookies sind für den Betrieb der Website erforderlich und lassen sich nicht abwählen.",
+    "withdrawNote": "Du kannst deine Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen. Mehr dazu:",
+    "privacyLink": "Datenschutz",
+    "legalNoticeLink": "Impressum",
+    "categories": {
+      "necessary": {
+        "title": "Notwendig",
+        "description": "Erforderlich für Sicherheit, Formulare und das Speichern deiner Cookie-Entscheidung.",
+        "detail": "Speicherdauer: bis zu 6 Monate. Anbieter: CraftWise."
+      },
+      "functional": {
+        "title": "Funktional",
+        "description": "Erlaubt die Seitenübersetzung über Google Translate auf den News-Seiten.",
+        "detail": "Anbieter: Google Ireland Ltd. Es können Daten in die USA übertragen werden."
+      },
+      "statistics": {
+        "title": "Statistik",
+        "description": "Hilft uns zu verstehen, wie die Website genutzt wird, damit wir sie verbessern können.",
+        "detail": "Anbieter: Google Analytics 4 / Google Tag Manager. Speicherdauer: bis zu 24 Monate."
+      }
     }
   }
 }

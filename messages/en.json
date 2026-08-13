@@ -995,7 +995,8 @@
     "supportBookDemo": "Book Demo",
     "supportDataProcessing": "Data Processing Agreement",
     "supportFaq": "Frequently Asked Questions",
-    "copyright": "© 2025 , All Rights Reserved"
+    "copyright": "© 2025 , All Rights Reserved",
+    "supportCookieSettings": "Cookie settings"
   },
   "HomeCTA": {
     "titlePart1": "Start Your ",
@@ -2506,6 +2507,38 @@
     "error": {
       "title": "Something went wrong",
       "body": "We couldn't confirm your email right now. Please try the link again in a moment."
+    }
+  },
+  "CookieConsent": {
+    "title": "We respect your privacy",
+    "body": "We use necessary cookies to make this website work. For translation and statistics we rely on additional services — but only if you agree. You can change your choice at any time via “Cookie settings” in the footer.",
+    "bannerAriaLabel": "Cookie notice",
+    "acceptAll": "Accept all",
+    "rejectAll": "Reject all",
+    "settings": "Settings",
+    "saveSelection": "Save selection",
+    "alwaysOn": "Always on",
+    "settingsTitle": "Cookie settings",
+    "settingsBody": "Choose which categories you allow. Necessary cookies are required to operate the website and cannot be switched off.",
+    "withdrawNote": "You can withdraw your consent at any time with effect for the future. More information:",
+    "privacyLink": "Privacy policy",
+    "legalNoticeLink": "Legal notice",
+    "categories": {
+      "necessary": {
+        "title": "Necessary",
+        "description": "Required for security, forms and storing your cookie choice.",
+        "detail": "Storage period: up to 6 months. Provider: CraftWise."
+      },
+      "functional": {
+        "title": "Functional",
+        "description": "Enables page translation via Google Translate on the news pages.",
+        "detail": "Provider: Google Ireland Ltd. Data may be transferred to the USA."
+      },
+      "statistics": {
+        "title": "Statistics",
+        "description": "Helps us understand how the website is used so we can improve it.",
+        "detail": "Provider: Google Analytics 4 / Google Tag Manager. Storage period: up to 24 months."
+      }
     }
   }
 }

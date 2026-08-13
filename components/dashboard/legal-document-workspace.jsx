@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   createLegalDocumentDraft,
+  deleteLegalDocumentDraft,
   publishLegalDocumentVersion,
   saveLegalDocumentDraft,
   submitLegalDocumentDraft,
@@ -84,6 +85,25 @@ export default function LegalDocumentWorkspace({ workspace, canPublish = false }
 
     startTransition(async () => {
       const response = await publishLegalDocumentVersion(activeDraft.id);
+      setWorkflowMessage(response.msg || "");
+      if (response.success) {
+        router.refresh();
+      }
+    });
+  };
+
+  const deleteDraft = () => {
+    if (!activeDraft) return;
+
+    if (
+      !window.confirm(
+        `Delete draft v${activeDraft.versionNumber}? The published page stays online, but this draft cannot be recovered.`,
+      )
+    )
+      return;
+
+    startTransition(async () => {
+      const response = await deleteLegalDocumentDraft(activeDraft.id);
       setWorkflowMessage(response.msg || "");
       if (response.success) {
         router.refresh();
@@ -278,6 +298,14 @@ export default function LegalDocumentWorkspace({ workspace, canPublish = false }
                   {pending ? "Publishing..." : "Publish version"}
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={deleteDraft}
+                disabled={pending}
+                className="rounded-full border border-[#F3C4C0] px-5 py-3 text-sm font-semibold text-[var(--adm-bad)] transition hover:bg-[var(--adm-bad-wash)] disabled:opacity-70"
+              >
+                {pending ? "Working..." : "Delete draft"}
+              </button>
               <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusTone(activeDraft.status)}`}>
                 {activeDraft.status} · v{activeDraft.versionNumber}
               </span>

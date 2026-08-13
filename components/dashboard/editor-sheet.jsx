@@ -27,8 +27,10 @@ export default function EditorSheet({
   children,
   onSaveDraft,
   onPublish,
+  onUnpublish,
   saveLabel = "Save draft",
   publishLabel = "Publish",
+  unpublishLabel = "Unpublish",
   pending,
   dirty,
   footerNote,
@@ -71,6 +73,11 @@ export default function EditorSheet({
             <AdminButton variant='ghost' type='button' onClick={() => requestClose(false)}>
               Cancel
             </AdminButton>
+            {onUnpublish ? (
+              <AdminButton variant='danger' type='button' onClick={onUnpublish} disabled={pending}>
+                {unpublishLabel}
+              </AdminButton>
+            ) : null}
             {onSaveDraft ? (
               <AdminButton
                 variant='outline'

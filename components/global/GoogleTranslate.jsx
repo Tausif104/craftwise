@@ -4,12 +4,20 @@ import { useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";
 import { applyGoogleTranslateLang } from "@/lib/googleTranslateController";
 import { BlogContext } from "@/lib/BlogContext";
+import { useConsent } from "@/components/global/consent-provider";
 
 let GT_INITIALIZED = false;
 
 export default function GoogleTranslate() {
   const { control } = useContext(BlogContext);
+
+  // translate.google.com is a third-party service that sets its own cookies, so
+  // it may not load before the visitor accepts the functional category.
+  const { allows } = useConsent();
+  const translationAllowed = allows("functional");
+
   useEffect(() => {
+    if (!translationAllowed) return;
     if (GT_INITIALIZED) return;
 
     window.googleTranslateElementInit = () => {
@@ -42,8 +50,7 @@ export default function GoogleTranslate() {
       script.async = true;
       document.body.appendChild(script);
     }
-  }, [control]);
-  console.log(control, "s");
+  }, [control, translationAllowed]);
 
   return (
     <div

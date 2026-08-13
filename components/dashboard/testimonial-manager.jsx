@@ -13,6 +13,7 @@ import {
   Field,
   LocaleTabs,
   PageHeader,
+  ReorderCell,
   Row,
   SelectInput,
   StatusPill,
@@ -20,6 +21,7 @@ import {
   TextArea,
   TextInput,
   publishTone,
+  useReorderable,
   useUnsavedChanges,
 } from "@/components/dashboard/admin-kit";
 import EditorSheet from "@/components/dashboard/editor-sheet";
@@ -30,7 +32,11 @@ const PAGE_OPTIONS = ANNOUNCEMENT_PAGE_OPTIONS.map((page) => ({
   value: page.key,
   label: page.label,
 }));
-import { deleteTestimonial, saveTestimonial } from "@/app/actions/content.actions";
+import {
+  deleteTestimonial,
+  reorderTestimonials,
+  saveTestimonial,
+} from "@/app/actions/content.actions";
 
 const BLANK = {
   id: "",
@@ -54,6 +60,7 @@ export default function TestimonialManager({ testimonials, pageFilter }) {
   const [form, setForm] = useState(BLANK);
   const [pageKeys, setPageKeys] = useState([]);
   const [dirty, setDirty] = useState(false);
+  const { order, move, reordering } = useReorderable(testimonials, reorderTestimonials);
 
   useUnsavedChanges(dirty);
 
@@ -79,6 +86,8 @@ export default function TestimonialManager({ testimonials, pageFilter }) {
     setForm((current) => ({ ...current, [key]: value }));
     setDirty(true);
   };
+
+  const editingPublished = editing && editing !== "new" && form.status === "PUBLISHED";
 
   const submit = (status) => {
     const formData = new FormData();
@@ -162,8 +171,19 @@ export default function TestimonialManager({ testimonials, pageFilter }) {
         description='Shown in the reviews section of the pages you choose.'
         dirty={dirty}
         pending={pending}
-        onSaveDraft={() => submit("DRAFT")}
+        saveLabel={editingPublished ? "Save changes" : "Save draft"}
+        publishLabel={editingPublished ? "Save & publish" : "Publish"}
+        footerNote={editingPublished && !dirty ? "Live on the website" : undefined}
+        onSaveDraft={() => submit(editingPublished ? "KEEP" : "DRAFT")}
         onPublish={() => submit("PUBLISHED")}
+        onUnpublish={
+          editingPublished
+            ? () => {
+                if (!window.confirm("Take this testimonial off the website?")) return;
+                submit("DRAFT");
+              }
+            : undefined
+        }
       >
         <div className='space-y-4'>
           <div className='flex justify-end'>
@@ -213,7 +233,7 @@ export default function TestimonialManager({ testimonials, pageFilter }) {
               />
             </Field>
 
-            <Field label='Order'>
+            <Field label='Order' hint='Lower shows first — or use the arrows in the list'>
               <TextInput
                 type='number'
                 value={form.sortOrder}
@@ -255,6 +275,7 @@ export default function TestimonialManager({ testimonials, pageFilter }) {
 
       <DataTable
         columns={[
+          { key: "order", label: "Order" },
           { key: "author", label: "Author" },
           { key: "quote", label: "Quote" },
           { key: "rating", label: "Rating" },
@@ -273,8 +294,16 @@ export default function TestimonialManager({ testimonials, pageFilter }) {
           ) : null
         }
       >
-        {testimonials.map((testimonial) => (
+        {order.map((testimonial, index) => (
           <Row key={testimonial.id}>
+            <Cell>
+              <ReorderCell
+                index={index}
+                total={order.length}
+                onMove={move}
+                disabled={reordering}
+              />
+            </Cell>
             <Cell>
               <span className='font-semibold'>{testimonial.authorName}</span>
               <span className='mt-0.5 block text-[11.5px] text-[var(--adm-ink-faint)]'>
