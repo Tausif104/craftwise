@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
+import { CONSENT_OPEN_EVENT } from "@/lib/consent";
 import Image from 'next/image'
 import {
   FaFacebook,
@@ -150,6 +151,16 @@ const Footer = ({ ctaData, ctaDesktopOnly = false }) => {
                   <Link className='text-white/80 text-sm md:text-base hover:text-primary transition-colors' href='/faq'>
                     {t('supportFaq')}
                   </Link>
+                </li>
+                <li>
+                  {/* Consent has to be revocable as easily as it was given. */}
+                  <button
+                    type='button'
+                    onClick={() => window.dispatchEvent(new CustomEvent(CONSENT_OPEN_EVENT))}
+                    className='text-white/80 text-sm md:text-base hover:text-primary transition-colors text-left cursor-pointer'
+                  >
+                    {t('supportCookieSettings')}
+                  </button>
                 </li>
               </ul>
             </div>
